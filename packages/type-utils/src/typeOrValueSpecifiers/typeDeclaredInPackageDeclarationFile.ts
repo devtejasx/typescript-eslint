@@ -28,6 +28,21 @@ function typeDeclaredInDeclareModule(
   );
 }
 
+/**
+ * `sourceFileToPackageName` maps to a package name followed by the file's path
+ * within that package, e.g. `typescript/lib/typescript.d.ts`. So a package
+ * matches only as a whole leading path segment: comparing `@angular/com`
+ * against `@angular/common/http/index.d.ts` must not match.
+ */
+function packageIdNameIsInPackage(
+  packageIdName: string,
+  packageName: string,
+): boolean {
+  return (
+    packageIdName === packageName || packageIdName.startsWith(`${packageName}/`)
+  );
+}
+
 function typeDeclaredInDeclarationFile(
   packageName: string,
   declarationFiles: ts.SourceFile[],
@@ -35,13 +50,14 @@ function typeDeclaredInDeclarationFile(
 ): boolean {
   // Handle scoped packages: if the name starts with @, remove it and replace / with __
   const typesPackageName = packageName.replace(/^@([^/]+)\//, '$1__');
+  const definitelyTypedPackageName = `@types/${typesPackageName}`;
 
-  const matcher = new RegExp(`${packageName}|${typesPackageName}`);
   return declarationFiles.some(declaration => {
     const packageIdName = program.sourceFileToPackageName.get(declaration.path);
     return (
       packageIdName != null &&
-      matcher.test(packageIdName) &&
+      (packageIdNameIsInPackage(packageIdName, packageName) ||
+        packageIdNameIsInPackage(packageIdName, definitelyTypedPackageName)) &&
       program.isSourceFileFromExternalLibrary(declaration)
     );
   });
