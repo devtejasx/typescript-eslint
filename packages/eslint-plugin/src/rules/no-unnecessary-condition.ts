@@ -342,6 +342,16 @@ export default createRule<Options, MessageId>({
       return false;
     }
 
+    function isUnionKeyedElementAccess(node: TSESTree.Node): boolean {
+      return (
+        node.type === AST_NODE_TYPES.MemberExpression &&
+        node.computed &&
+        tsutils.unionConstituents(
+          getConstrainedTypeAtLocation(services, node.property),
+        ).length > 1
+      );
+    }
+
     /**
      * Checks if a conditional node is necessary:
      * if the type of the node is always true or always false, it's not necessary.
@@ -908,6 +918,15 @@ export default createRule<Options, MessageId>({
     function checkAssignmentExpression(
       node: TSESTree.AssignmentExpression,
     ): void {
+      // The type of an assignment target is the type the assignment *writes*,
+      // and for an index access with a union of keys that is the intersection
+      // of the property types - `{ a?: number; b?: boolean }[k]` writes
+      // `number & boolean`, i.e. `never`. A logical assignment reads its target
+      // first, and the write type says nothing about what that read produces.
+      if (isUnionKeyedElementAccess(node.left)) {
+        return;
+      }
+
       // Similar to checkLogicalExpressionForUnnecessaryConditionals, since
       // a ||= b is equivalent to a || (a = b)
       if (['&&=', '||='].includes(node.operator)) {

@@ -1037,6 +1037,32 @@ declare const foo: Foo;
 declare const key: Keys;
 foo[key] ??= 1;
     `,
+    // an index access with a union of keys writes the intersection of the
+    // property types, so the assignment target's type says nothing about what
+    // reading it produces
+    // https://github.com/typescript-eslint/typescript-eslint/issues/12556
+    `
+type Fields = {
+  hello?: number;
+  world?: boolean;
+};
+
+declare const fields: Fields;
+
+for (const key of ['hello', 'world'] as const) {
+  fields[key] ??= undefined;
+}
+    `,
+    `
+declare const fields: { hello?: number; world?: boolean };
+declare const key: 'hello' | 'world';
+fields[key] ||= 1 as never;
+    `,
+    `
+declare const fields: { hello?: number; world?: boolean };
+declare const key: 'hello' | 'world';
+fields[key] &&= 1 as never;
+    `,
     {
       code: `
 declare const foo: { bar?: number };
@@ -3422,6 +3448,22 @@ foo ??= 1;
           endColumn: 4,
           endLine: 3,
           line: 3,
+          messageId: 'neverNullish',
+        },
+      ],
+    },
+    {
+      code: `
+declare const foo: { bar: number };
+declare const key: 'bar';
+foo[key] ??= 1;
+      `,
+      errors: [
+        {
+          column: 1,
+          endColumn: 9,
+          endLine: 4,
+          line: 4,
           messageId: 'neverNullish',
         },
       ],
