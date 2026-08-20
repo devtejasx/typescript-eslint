@@ -10,7 +10,6 @@ import type { MakeRequired } from '../util';
 import {
   createRule,
   getParserServices,
-  getWrappingFixer,
   nullThrows,
   NullThrowsReasons,
 } from '../util';
@@ -19,6 +18,29 @@ type NodeWithTypeParameters = MakeRequired<
   ts.ClassLikeDeclaration | ts.SignatureDeclaration,
   'typeParameters'
 >;
+
+/**
+ * Constraint forms that bind less tightly than the type syntax in
+ * {@link PARENTHESIZING_ANCESTOR_TYPES}, so substituting one in unparenthesized
+ * would reassociate: `keyof Foo` used as `T[]` becomes `keyof Foo[]`, which
+ * means `keyof (Foo[])`, and `() => number` becomes `() => number[]`.
+ */
+const CONSTRAINT_TYPES_NEEDING_PARENS = new Set([
+  AST_NODE_TYPES.TSConditionalType,
+  AST_NODE_TYPES.TSConstructorType,
+  AST_NODE_TYPES.TSFunctionType,
+  AST_NODE_TYPES.TSInferType,
+  AST_NODE_TYPES.TSIntersectionType,
+  AST_NODE_TYPES.TSTypeOperator,
+  AST_NODE_TYPES.TSUnionType,
+]);
+
+const PARENTHESIZING_ANCESTOR_TYPES = new Set([
+  AST_NODE_TYPES.TSArrayType,
+  AST_NODE_TYPES.TSIndexedAccessType,
+  AST_NODE_TYPES.TSIntersectionType,
+  AST_NODE_TYPES.TSUnionType,
+]);
 
 export default createRule({
   name: 'no-unnecessary-type-parameters',
@@ -109,28 +131,17 @@ export default createRule({
                 for (const reference of smTypeParameterVariable.references) {
                   if (reference.isTypeReference) {
                     const referenceNode = reference.identifier;
-                    const isComplexType =
-                      constraint?.type === AST_NODE_TYPES.TSUnionType ||
-                      constraint?.type === AST_NODE_TYPES.TSIntersectionType ||
-                      constraint?.type === AST_NODE_TYPES.TSConditionalType;
-                    const hasMatchingAncestorType = [
-                      AST_NODE_TYPES.TSArrayType,
-                      AST_NODE_TYPES.TSIndexedAccessType,
-                      AST_NODE_TYPES.TSIntersectionType,
-                      AST_NODE_TYPES.TSUnionType,
-                      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                    ].some(type => referenceNode.parent.parent!.type === type);
-                    if (isComplexType && hasMatchingAncestorType) {
-                      const fixResult = getWrappingFixer({
-                        node: referenceNode,
-                        innerNode: constraint,
-                        sourceCode: context.sourceCode,
-                        wrap: constraintNode => constraintNode,
-                      })(fixer);
-                      yield fixResult;
-                    } else {
-                      yield fixer.replaceText(referenceNode, constraintText);
-                    }
+                    const needsParens =
+                      constraint != null &&
+                      CONSTRAINT_TYPES_NEEDING_PARENS.has(constraint.type) &&
+                      PARENTHESIZING_ANCESTOR_TYPES.has(
+                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                        referenceNode.parent.parent!.type,
+                      );
+                    yield fixer.replaceText(
+                      referenceNode,
+                      needsParens ? `(${constraintText})` : constraintText,
+                    );
                   }
                 }
 

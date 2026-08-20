@@ -1831,6 +1831,71 @@ function join(els: (string | number)[]) {
     },
     {
       code: `
+interface Foo {
+  a: string;
+  b: number;
+}
+function fn<T extends keyof Foo>(x: T[]) {}
+      `,
+      errors: [
+        {
+          data: { descriptor: 'function', name: 'T', uses: 'used only once' },
+          messageId: 'sole',
+          suggestions: [
+            {
+              messageId: 'replaceUsagesWithConstraint',
+              output: `
+interface Foo {
+  a: string;
+  b: number;
+}
+function fn(x: (keyof Foo)[]) {}
+      `,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      code: `
+function fn<T extends () => number>(x: T[]) {}
+      `,
+      errors: [
+        {
+          data: { descriptor: 'function', name: 'T', uses: 'used only once' },
+          messageId: 'sole',
+          suggestions: [
+            {
+              messageId: 'replaceUsagesWithConstraint',
+              output: `
+function fn(x: (() => number)[]) {}
+      `,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      code: `
+function fn<T extends new () => number>(x: T[]) {}
+      `,
+      errors: [
+        {
+          data: { descriptor: 'function', name: 'T', uses: 'used only once' },
+          messageId: 'sole',
+          suggestions: [
+            {
+              messageId: 'replaceUsagesWithConstraint',
+              output: `
+function fn(x: (new () => number)[]) {}
+      `,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      code: `
 function join<T extends { hoge: string } | { hoge: number }>(els: T['hoge'][]) {
   return els.map(el => '' + el).join(',');
 }
