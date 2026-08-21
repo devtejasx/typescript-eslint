@@ -8,11 +8,14 @@ export function createCompilerOptions(
 ): ts.CompilerOptions {
   const config = window.ts.convertCompilerOptionsFromJson(
     {
+      // `allowJs` is a default rather than an override so that the playground
+      // can load `.js`/`.cjs`/`.mjs` files, while still letting a user's
+      // tsconfig turn it off (e.g. to use `isolatedDeclarations`).
+      allowJs: true,
       jsx: 'preserve',
       module: 'esnext',
       target: 'esnext',
       ...tsConfig,
-      allowJs: true,
       baseUrl: undefined,
       lib: Array.isArray(tsConfig.lib) ? tsConfig.lib : undefined,
       moduleDetection: undefined,
