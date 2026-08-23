@@ -66,6 +66,32 @@ export class TypeVisitor extends Visitor {
     this.#referencer.close(node);
   }
 
+  /**
+   * Visits the namespace part of a qualified name, i.e. the `A.B` of `A.B.C`.
+   * Its left-most name is resolved in the namespace meaning, which a type
+   * parameter never has, so it can reference a namespace that a generic shadows.
+   */
+  protected visitNamespaceName(
+    node: TSESTree.EntityName | TSESTree.Expression,
+  ): void {
+    switch (node.type) {
+      case AST_NODE_TYPES.Identifier:
+        this.#referencer.currentScope().referenceNamespace(node);
+        break;
+
+      case AST_NODE_TYPES.MemberExpression:
+        this.visitNamespaceName(node.object);
+        break;
+
+      case AST_NODE_TYPES.TSQualifiedName:
+        this.visitNamespaceName(node.left);
+        break;
+
+      default:
+        this.visit(node);
+    }
+  }
+
   protected visitPropertyKey(
     node: TSESTree.TSMethodSignature | TSESTree.TSPropertySignature,
   ): void {
@@ -85,7 +111,7 @@ export class TypeVisitor extends Visitor {
   }
 
   protected MemberExpression(node: TSESTree.MemberExpression): void {
-    this.visit(node.object);
+    this.visitNamespaceName(node.object);
     // don't visit the property
   }
 
@@ -226,7 +252,7 @@ export class TypeVisitor extends Visitor {
   }
 
   protected TSQualifiedName(node: TSESTree.TSQualifiedName): void {
-    this.visit(node.left);
+    this.visitNamespaceName(node.left);
     // we don't visit the right as it a name on the thing, not a name to reference
   }
 

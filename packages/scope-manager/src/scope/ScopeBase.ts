@@ -22,6 +22,17 @@ import { Variable } from '../variable';
 import { ScopeType } from './ScopeType';
 
 /**
+ * Test if a variable is declared exclusively by type parameters, e.g. the `T` in
+ * `class Foo<T> {}`
+ */
+function isTypeParameterVariable(variable: Variable): boolean {
+  return (
+    variable.defs.length > 0 &&
+    variable.defs.every(def => def.node.type === AST_NODE_TYPES.TSTypeParameter)
+  );
+}
+
+/**
  * Test if scope is strict
  */
 function isStrictScope(
@@ -234,6 +245,13 @@ export abstract class ScopeBase<
         return false;
       }
 
+      // the left-most name of a qualified name is resolved in the namespace
+      // meaning, which a type parameter never has - so it must look past a
+      // generic that shadows a namespace
+      if (ref.isNamespaceReference && isTypeParameterVariable(variable)) {
+        return false;
+      }
+
       // make sure we don't match a type reference to a value variable
       const isValidTypeReference =
         ref.isTypeReference && variable.isTypeVariable;
@@ -391,6 +409,21 @@ export abstract class ScopeBase<
       null,
       false,
       ReferenceTypeFlag.Type | ReferenceTypeFlag.Value,
+    );
+
+    this.references.push(ref);
+    this.leftToResolve?.push(ref);
+  }
+
+  public referenceNamespace(node: TSESTree.Identifier): void {
+    const ref = new Reference(
+      node,
+      this as Scope,
+      ReferenceFlag.Read,
+      null,
+      null,
+      false,
+      ReferenceTypeFlag.Type | ReferenceTypeFlag.Namespace,
     );
 
     this.references.push(ref);

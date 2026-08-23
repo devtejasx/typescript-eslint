@@ -2466,6 +2466,27 @@ import { Component, Component2 } from 'react';
 class Foo implements Component<Nullable<SomeOther>, {}>, Component2 {}
 new Foo();
     `,
+    // https://github.com/typescript-eslint/typescript-eslint/issues/10746
+    `
+import type * as T from 'foo';
+export class Bar<T> implements T.Foo {
+  someMethod(value: T) {
+    console.log(value);
+  }
+}
+    `,
+    `
+import type * as T from 'foo';
+export function bar<T>(value: T): T.Foo {
+  return value;
+}
+    `,
+    `
+import type * as T from 'foo';
+export interface Bar<T> extends T.Foo {
+  someProperty: T;
+}
+    `,
     `
 import { Nullable } from 'nullable';
 import { Another } from 'some';

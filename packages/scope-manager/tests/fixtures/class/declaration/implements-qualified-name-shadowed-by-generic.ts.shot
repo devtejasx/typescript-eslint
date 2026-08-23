@@ -1,0 +1,173 @@
+ScopeManager {
+  variables: [
+    ImplicitGlobalConstTypeVariable,
+    Variable$2 {
+      defs: [
+        ImportBindingDefinition$1 {
+          name: Identifier<"T">,
+          node: ImportNamespaceSpecifier$1,
+        },
+      ],
+      name: "T",
+      references: [
+        Reference$1 {
+          identifier: Identifier<"T">,
+          isRead: true,
+          isTypeReference: true,
+          isValueReference: false,
+          isWrite: false,
+          resolved: Variable$2,
+        },
+        Reference$3 {
+          identifier: Identifier<"T">,
+          isRead: true,
+          isTypeReference: true,
+          isValueReference: false,
+          isWrite: false,
+          resolved: Variable$2,
+        },
+      ],
+      isValueVariable: true,
+      isTypeVariable: true,
+    },
+    Variable$3 {
+      defs: [
+        ClassNameDefinition$2 {
+          name: Identifier<"Bar">,
+          node: ClassDeclaration$2,
+        },
+      ],
+      name: "Bar",
+      references: [],
+      isValueVariable: true,
+      isTypeVariable: true,
+    },
+    Variable$4 {
+      defs: [
+        ClassNameDefinition$3 {
+          name: Identifier<"Bar">,
+          node: ClassDeclaration$2,
+        },
+      ],
+      name: "Bar",
+      references: [],
+      isValueVariable: true,
+      isTypeVariable: true,
+    },
+    Variable$5 {
+      defs: [
+        TypeDefinition$4 {
+          name: Identifier<"T">,
+          node: TSTypeParameter$3,
+        },
+      ],
+      name: "T",
+      references: [
+        Reference$2 {
+          identifier: Identifier<"T">,
+          isRead: true,
+          isTypeReference: true,
+          isValueReference: false,
+          isWrite: false,
+          resolved: Variable$5,
+        },
+      ],
+      isValueVariable: false,
+      isTypeVariable: true,
+    },
+    Variable$6 {
+      defs: [],
+      name: "arguments",
+      references: [],
+      isValueVariable: true,
+      isTypeVariable: true,
+    },
+    Variable$7 {
+      defs: [
+        ParameterDefinition$5 {
+          name: Identifier<"value">,
+          node: FunctionExpression$4,
+        },
+      ],
+      name: "value",
+      references: [
+        Reference$4 {
+          identifier: Identifier<"value">,
+          isRead: true,
+          isTypeReference: false,
+          isValueReference: true,
+          isWrite: false,
+          resolved: Variable$7,
+        },
+      ],
+      isValueVariable: true,
+      isTypeVariable: false,
+    },
+  ],
+  scopes: [
+    GlobalScope$1 {
+      block: Program$5,
+      isStrict: false,
+      references: [],
+      set: Map {
+        "const" => ImplicitGlobalConstTypeVariable,
+      },
+      type: "global",
+      upper: null,
+      variables: [
+        ImplicitGlobalConstTypeVariable,
+      ],
+    },
+    ModuleScope$2 {
+      block: Program$5,
+      isStrict: true,
+      references: [],
+      set: Map {
+        "T" => Variable$2,
+        "Bar" => Variable$3,
+      },
+      type: "module",
+      upper: GlobalScope$1,
+      variables: [
+        Variable$2,
+        Variable$3,
+      ],
+    },
+    ClassScope$3 {
+      block: ClassDeclaration$2,
+      isStrict: true,
+      references: [
+        Reference$1,
+      ],
+      set: Map {
+        "Bar" => Variable$4,
+        "T" => Variable$5,
+      },
+      type: "class",
+      upper: ModuleScope$2,
+      variables: [
+        Variable$4,
+        Variable$5,
+      ],
+    },
+    FunctionScope$4 {
+      block: FunctionExpression$4,
+      isStrict: true,
+      references: [
+        Reference$2,
+        Reference$3,
+        Reference$4,
+      ],
+      set: Map {
+        "arguments" => Variable$6,
+        "value" => Variable$7,
+      },
+      type: "function",
+      upper: ClassScope$3,
+      variables: [
+        Variable$6,
+        Variable$7,
+      ],
+    },
+  ],
+}

@@ -22,6 +22,7 @@ const generator = createIdGenerator();
 export enum ReferenceTypeFlag {
   Value = 0x1,
   Type = 0x2,
+  Namespace = 0x4,
 }
 
 /**
@@ -96,6 +97,14 @@ export class Reference {
 
     this.maybeImplicitGlobal = maybeImplicitGlobal;
     this.#referenceType = referenceType;
+  }
+
+  /**
+   * True if this reference is the left-most name of a qualified name, i.e. the
+   * `T` in `T.Foo`, and so can only reference a namespace
+   */
+  public get isNamespaceReference(): boolean {
+    return (this.#referenceType & ReferenceTypeFlag.Namespace) !== 0;
   }
 
   /**
