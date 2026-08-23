@@ -177,6 +177,25 @@ describe('populateGlobalsFromLib – deduplication', () => {
   });
 });
 
+describe('populateGlobalsFromLib – merging declarations across libs', () => {
+  // https://github.com/typescript-eslint/typescript-eslint/issues/11714
+  it('unions the meanings of a global that several libs declare', () => {
+    const result = analyze(parse('Math.max(1, 2);', { range: true }), {
+      lib: ['esnext'],
+    });
+    const globalScope = result.globalScope!;
+
+    // `Math` is a value in es5 and a type-only interface augmentation in es2015.core
+    const math = globalScope.set.get('Math');
+
+    expect(math?.isTypeVariable).toBe(true);
+    expect(math?.isValueVariable).toBe(true);
+    expect(
+      math?.references.map(reference => reference.identifier.name),
+    ).toEqual(['Math']);
+  });
+});
+
 describe('populateGlobalsFromLib – const assertion global', () => {
   it('const type variable is always registered for const assertions', () => {
     const noLibResult = analyze(ast, { lib: [] });

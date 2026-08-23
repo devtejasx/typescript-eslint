@@ -4,7 +4,7 @@ import { AST_NODE_TYPES } from '@typescript-eslint/types';
 
 import type { GlobalScope, Scope } from '../scope';
 import type { ScopeManager } from '../ScopeManager';
-import type { LibDefinition } from '../variable';
+import type { ImplicitLibVariableOptions, LibDefinition } from '../variable';
 import type { ReferenceImplicitGlobal } from './Reference';
 import type { VisitorOptions } from './Visitor';
 
@@ -27,6 +27,27 @@ import { PatternVisitor } from './PatternVisitor';
 import { ReferenceFlag } from './Reference';
 import { TypeVisitor } from './TypeVisitor';
 import { Visitor } from './Visitor';
+
+/**
+ * A name can be declared by more than one lib - most commonly as a value in
+ * `es5` and then as a type-only interface augmentation in a later lib. The
+ * variable has every meaning that any of its declarations gives it.
+ */
+function mergeImplicitVariableOptions(
+  a: ImplicitLibVariableOptions,
+  b: ImplicitLibVariableOptions,
+): ImplicitLibVariableOptions {
+  return {
+    eslintImplicitGlobalSetting:
+      a.eslintImplicitGlobalSetting === 'writable' ||
+      b.eslintImplicitGlobalSetting === 'writable'
+        ? 'writable'
+        : (a.eslintImplicitGlobalSetting ?? b.eslintImplicitGlobalSetting),
+    isTypeVariable: !!a.isTypeVariable || !!b.isTypeVariable,
+    isValueVariable: !!a.isValueVariable || !!b.isValueVariable,
+    writeable: !!a.writeable || !!b.writeable,
+  };
+}
 
 export interface ReferencerOptions extends VisitorOptions {
   jsxFragmentName: string | null;
@@ -54,10 +75,21 @@ export class Referencer extends Visitor {
   private populateGlobalsFromLib(globalScope: GlobalScope): void {
     const libs = this.resolveLibDefinitions();
 
+    // aggregate the declarations before defining them, so that a name declared
+    // by several libs ends up with the union of their meanings
+    const variables = new Map<string, ImplicitLibVariableOptions>();
     for (const lib of libs) {
-      for (const [name, variable] of lib.variables) {
-        globalScope.defineImplicitVariable(name, variable);
+      for (const [name, options] of lib.variables) {
+        const existing = variables.get(name);
+        variables.set(
+          name,
+          existing ? mergeImplicitVariableOptions(existing, options) : options,
+        );
       }
+    }
+
+    for (const [name, options] of variables) {
+      globalScope.defineImplicitVariable(name, options);
     }
 
     // Special implicit global for const assertions (`{} as const`, `<const>{}`)
