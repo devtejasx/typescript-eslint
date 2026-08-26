@@ -102,6 +102,20 @@ export default createRule<Options, MessageId>({
         .some(part => isTypeFlagSet(part, ts.TypeFlags.Undefined));
     }
 
+    /**
+     * Elements before a tuple's rest element sit at a fixed index. From the
+     * rest element onwards the index no longer picks out one declared element:
+     * an empty rest shifts every later element down, so the value at that index
+     * can be missing at runtime and a default for it is reachable.
+     */
+    function isFixedTupleElement(
+      tupleType: ts.Type,
+      elementIndex: number,
+    ): boolean {
+      const { target } = tupleType as ts.TupleTypeReference;
+      return !target.hasRestElement || elementIndex < target.fixedLength;
+    }
+
     function getArrayElementType(
       arrayType: ts.Type,
       elementIndex: number,
@@ -223,6 +237,9 @@ export default createRule<Options, MessageId>({
         const tupleArgs = checker.getTypeArguments(sourceType);
         const elementIndex = parent.elements.indexOf(node);
         if (elementIndex < 0 || elementIndex >= tupleArgs.length) {
+          return;
+        }
+        if (!isFixedTupleElement(sourceType, elementIndex)) {
           return;
         }
         const elementType = tupleArgs[elementIndex];

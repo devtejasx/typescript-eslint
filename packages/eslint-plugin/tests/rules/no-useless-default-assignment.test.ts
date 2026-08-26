@@ -226,6 +226,19 @@ useCallback((value: number[] = []) => {});
 declare const tuple: [string];
 const [a, b = 'default'] = tuple;
     `,
+    // https://github.com/typescript-eslint/typescript-eslint/issues/12767
+    `
+declare const commands: [string, ...string[]];
+const [cmd, arg = 'run'] = commands;
+    `,
+    `
+declare const items: [...string[], string | undefined];
+const [first = 'fallback'] = items;
+    `,
+    `
+declare const mixed: [string, ...number[], boolean];
+const [head, middle = 0, tail = true] = mixed;
+    `,
     // https://github.com/typescript-eslint/typescript-eslint/issues/11911
     `
 const run = (cb: (...args: unknown[]) => void) => cb();
@@ -352,6 +365,28 @@ const fn: Fn = (value = 'default') => {
     `,
   ],
   invalid: [
+    // https://github.com/typescript-eslint/typescript-eslint/issues/12767
+    // An element before the rest still sits at a fixed index, so it is always
+    // present and its default really is useless.
+    {
+      code: `
+declare const commands: [string, ...string[]];
+const [cmd = 'build'] = commands;
+      `,
+      errors: [
+        {
+          column: 14,
+          data: { type: 'property' },
+          endColumn: 21,
+          line: 3,
+          messageId: 'uselessDefaultAssignment',
+        },
+      ],
+      output: `
+declare const commands: [string, ...string[]];
+const [cmd] = commands;
+      `,
+    },
     {
       code: `
 function Bar({ foo = '' }: { foo: string }) {
