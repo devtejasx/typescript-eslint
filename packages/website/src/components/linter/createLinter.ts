@@ -55,7 +55,12 @@ export function createLinter(
 ): CreateLinter {
   const rules: CreateLinter['rules'] = new Map();
   const configs = new Map(Object.entries(webLinterModule.configs));
-  let compilerOptions: ts.CompilerOptions = {};
+  // The parser builds its virtual TypeScript environment from these straight
+  // away, before any tsconfig tab has been registered. Starting from the same
+  // defaults createCompilerOptions applies keeps allowJs on, without which
+  // opening the playground on a .js file fails to create a program and leaves
+  // the other editors unusable until a reload.
+  let compilerOptions: ts.CompilerOptions = createCompilerOptions();
   const parser = createParser(
     system,
     compilerOptions,
