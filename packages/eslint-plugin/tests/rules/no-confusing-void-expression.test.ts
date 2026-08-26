@@ -880,9 +880,7 @@ function foo(): void {
         },
       ],
       options: [{ ignoreVoidReturningFunctions: true }],
-      output: `
-(): unknown => { console.log('foo'); };
-      `,
+      output: null,
     },
     {
       code: `
@@ -935,10 +933,7 @@ type Foo = unknown;
         },
       ],
       options: [{ ignoreVoidReturningFunctions: true }],
-      output: `
-type Foo = unknown;
-(): Foo => { console.log(); };
-      `,
+      output: null,
     },
     {
       code: `
@@ -974,11 +969,66 @@ function test(): unknown {
         },
       ],
       options: [{ ignoreVoidReturningFunctions: true }],
+      output: null,
+    },
+    {
+      code: `
+(): string | undefined => console.log('foo');
+      `,
+      errors: [
+        {
+          column: 27,
+          line: 2,
+          messageId: 'invalidVoidExprArrow',
+        },
+      ],
+      output: null,
+    },
+    {
+      code: `
+(): undefined => console.log('foo');
+      `,
+      errors: [
+        {
+          column: 18,
+          line: 2,
+          messageId: 'invalidVoidExprArrow',
+        },
+      ],
       output: `
+(): undefined => { console.log('foo'); };
+      `,
+    },
+    {
+      code: `
+(): void | string => console.log('foo');
+      `,
+      errors: [
+        {
+          column: 22,
+          line: 2,
+          messageId: 'invalidVoidExprArrow',
+        },
+      ],
+      output: `
+(): void | string => { console.log('foo'); };
+      `,
+    },
+    {
+      code: `
 function test(): unknown {
   console.log();
+  return console.log();
 }
       `,
+      errors: [
+        {
+          column: 10,
+          line: 4,
+          messageId: 'invalidVoidExprReturnLast',
+        },
+      ],
+      output: null,
     },
     {
       code: `

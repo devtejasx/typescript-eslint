@@ -421,7 +421,55 @@ export default createRule<Options, MessageId>({
           : node.body;
 
       const type = getConstrainedTypeAtLocation(services, targetNode);
-      return tsutils.isTypeFlagSet(type, ts.TypeFlags.VoidLike);
+      if (!tsutils.isTypeFlagSet(type, ts.TypeFlags.VoidLike)) {
+        return false;
+      }
+
+      // Both fixes guarded by this function leave the enclosing function with
+      // no returned value at all, which only compiles for some declared return
+      // types.
+      const functionNode =
+        node.type === AST_NODE_TYPES.ReturnStatement
+          ? getParentFunctionNode(node)
+          : node;
+
+      return !functionNode || allowsImplicitUndefinedReturn(functionNode);
+    }
+
+    /**
+     * Whether a function may omit returning a value. TypeScript reports TS2355
+     * ("A function whose declared type is neither 'undefined', 'void', nor
+     * 'any' must return a value") otherwise, so a fix that drops the only
+     * returned value would produce code that no longer compiles.
+     */
+    function allowsImplicitUndefinedReturn(
+      functionNode:
+        | TSESTree.ArrowFunctionExpression
+        | TSESTree.FunctionDeclaration
+        | TSESTree.FunctionExpression,
+    ): boolean {
+      if (!functionNode.returnType) {
+        // An inferred return type always accommodates the rewritten body.
+        return true;
+      }
+
+      const returnType = services.getTypeFromTypeNode(
+        functionNode.returnType.typeAnnotation,
+      );
+
+      // `any` and `void` are accepted anywhere in the return type...
+      if (
+        tsutils
+          .unionConstituents(returnType)
+          .some(part =>
+            tsutils.isTypeFlagSet(part, ts.TypeFlags.Any | ts.TypeFlags.Void),
+          )
+      ) {
+        return true;
+      }
+
+      // ...whereas `undefined` is only accepted on its own.
+      return tsutils.isTypeFlagSet(returnType, ts.TypeFlags.Undefined);
     }
 
     function isFunctionReturnTypeIncludesVoid(functionType: ts.Type): boolean {
