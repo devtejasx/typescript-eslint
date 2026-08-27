@@ -941,6 +941,35 @@ enum E {
 }
 const x: E | undefined = o?.fn(n => n | 0, 0 as E);
     `,
+    // https://github.com/typescript-eslint/typescript-eslint/issues/12271
+    `
+enum Color {
+  Red,
+  Green,
+  Blue,
+}
+declare const values: Record<Color, string>;
+declare const valueStr: string;
+values[+valueStr as Color] = 'updated';
+    `,
+    `
+enum Color {
+  Red,
+  Green,
+  Blue,
+}
+declare const valueStr: string;
+const color = +valueStr as Color;
+    `,
+    `
+enum Color {
+  Red,
+  Green,
+  Blue,
+}
+declare const color: Color;
+const n = color as number;
+    `,
   ],
 
   invalid: [

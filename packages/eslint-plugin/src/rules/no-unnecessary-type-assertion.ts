@@ -234,6 +234,16 @@ export default createRule<Options, MessageIds>({
         return false;
       }
 
+      /**
+       * A number flows into a numeric enum and back out again, so `uncast` and
+       * `cast` can be mutually assignable while the assertion still does real
+       * work -- `number` is not accepted where a `Color` is required.
+       * @see https://github.com/typescript-eslint/typescript-eslint/issues/12271
+       */
+      if (isEnumLike(uncast) !== isEnumLike(cast)) {
+        return false;
+      }
+
       if (
         isConceptuallyLiteral(expression) &&
         (expression.type !== AST_NODE_TYPES.ObjectExpression ||
@@ -276,6 +286,12 @@ export default createRule<Options, MessageIds>({
 
     function isTypeLiteral(type: ts.Type): boolean {
       return type.isLiteral() || tsutils.isBooleanLiteralType(type);
+    }
+
+    function isEnumLike(type: ts.Type): boolean {
+      return tsutils
+        .unionConstituents(type)
+        .some(part => isTypeFlagSet(part, ts.TypeFlags.EnumLike));
     }
 
     function hasIndexSignature(type: ts.Type): boolean {
