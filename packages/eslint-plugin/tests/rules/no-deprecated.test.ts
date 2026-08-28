@@ -2888,6 +2888,40 @@ const test = {
     },
     {
       code: `
+import { deprecatedVariable } from './deprecated';
+
+const test = { deprecatedVariable };
+      `,
+      errors: [
+        {
+          column: 16,
+          data: { name: 'deprecatedVariable' },
+          endColumn: 34,
+          endLine: 4,
+          line: 4,
+          messageId: 'deprecated',
+        },
+      ],
+    },
+    {
+      code: `
+import { deprecatedVariable as renamed } from './deprecated';
+
+const test = { renamed };
+      `,
+      errors: [
+        {
+          column: 16,
+          data: { name: 'renamed' },
+          endColumn: 23,
+          endLine: 4,
+          line: 4,
+          messageId: 'deprecated',
+        },
+      ],
+    },
+    {
+      code: `
 import { normalFunction } from './deprecated';
 
 const foo = normalFunction;

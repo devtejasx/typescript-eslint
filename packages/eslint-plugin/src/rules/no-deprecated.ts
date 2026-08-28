@@ -361,7 +361,10 @@ export default createRule<Options, MessageIds>({
           searchForDeprecationInAliasesChain(propertySymbol, true) ??
           getJsDocDeprecation(property) ??
           getJsDocDeprecation(propertySymbol) ??
-          getJsDocDeprecation(valueSymbol)
+          // For a shorthand property the symbol at the identifier is the
+          // property, not the value it stands for, so an imported value has to
+          // be followed through its alias chain here rather than above.
+          searchForDeprecationInAliasesChain(valueSymbol, true)
         );
       }
 
