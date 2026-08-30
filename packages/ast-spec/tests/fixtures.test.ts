@@ -7,6 +7,7 @@ import { VitestSnapshotEnvironment } from 'vitest/runtime';
 import type { Fixture } from './util/parsers/parser-types.js';
 
 import { getErrorLabel } from './util/getErrorLabel.js';
+import { getVisitorKeyOrderViolations } from './util/getVisitorKeyOrderViolations.js';
 import { parseBabel } from './util/parsers/babel.js';
 import { ErrorLabel, ParserResponseType } from './util/parsers/parser-types.js';
 import { parseTSESTree } from './util/parsers/typescript-estree.js';
@@ -259,6 +260,14 @@ describe('AST Fixtures', async () => {
           await expect(TSESTreeParsed.ast).toMatchFileSnapshot(
             snapshotFiles.success.tsestree.ast(1),
           );
+        });
+
+        it.skipIf(isError)('TSESTree - Visitor keys in source order', () => {
+          assert.isSuccessResponse(TSESTreeParsed);
+
+          // visitorKeys is documented as being "sorted in the order that they
+          // appear in the source code" - see packages/visitor-keys/src.
+          expect(getVisitorKeyOrderViolations(TSESTreeParsed.ast)).toEqual([]);
         });
 
         it.skipIf(isError)('TSESTree - Tokens', async () => {

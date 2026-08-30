@@ -367,6 +367,9 @@ importers:
       '@typescript-eslint/typescript-estree':
         specifier: workspace:*
         version: link:../typescript-estree
+      '@typescript-eslint/visitor-keys':
+        specifier: workspace:*
+        version: link:../visitor-keys
       '@typescript/native':
         specifier: 'catalog:'
         version: typescript@7.0.2
