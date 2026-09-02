@@ -51,6 +51,66 @@ export default defineConfig({
 
 This config file exports a flat config that enables both the [core ESLint recommended config](https://www.npmjs.com/package/@eslint/js) and [our recommended config](../users/Shared_Configurations.mdx#recommended).
 
+### Customizing a shared config
+
+Our shared configs are a starting point, not an all-or-nothing choice.
+To change a rule they enable, or to enable one they do not, add a config object after the `extends`.
+Later config objects win, so its `rules` are applied on top of everything the shared configs set.
+
+```js title="eslint.config.mjs"
+// @ts-check
+
+import js from '@eslint/js';
+import { defineConfig } from 'eslint/config';
+import tseslint from 'typescript-eslint';
+
+export default defineConfig({
+  files: ['**/*.{js,ts}'],
+  extends: [js.configs.recommended, tseslint.configs.recommended],
+  // highlight-start
+  rules: {
+    '@typescript-eslint/no-unused-vars': 'warn',
+    '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
+  },
+  // highlight-end
+});
+```
+
+There is no need to repeat `plugins` or `languageOptions.parser`: the shared configs already declare both, and the rules you add are looked up in the plugin they registered.
+
+Enabling a [type-aware rule](../getting-started/Typed_Linting.mdx) that a non-type-aware shared config does not turn on takes one more step, because those rules need type information:
+
+```js title="eslint.config.mjs"
+// @ts-check
+
+import js from '@eslint/js';
+import { defineConfig } from 'eslint/config';
+import tseslint from 'typescript-eslint';
+
+export default defineConfig({
+  // highlight-next-line
+  files: ['**/*.{ts,tsx}'],
+  extends: [js.configs.recommended, tseslint.configs.recommended],
+  languageOptions: {
+    parserOptions: {
+      // highlight-start
+      projectService: true,
+      tsconfigRootDir: import.meta.dirname,
+      // highlight-end
+    },
+  },
+  rules: {
+    '@typescript-eslint/no-floating-promises': 'error',
+  },
+});
+```
+
+:::tip
+Scope the config object with `files` when you enable type-aware rules this way.
+Without it the parser options apply to every file ESLint looks at, including ones your TSConfig does not include, and those files then fail to parse.
+See [Typed Linting](../getting-started/Typed_Linting.mdx) for the full setup and for the shared configs that enable type-aware rules for you.
+:::
+
 ### `extensions`
 
 The `extensions` export provides arrays of standard file extensions (without leading dots) for JavaScript and TypeScript files. These arrays are useful when you need to programmatically construct globs or perform file extension checks.
