@@ -174,6 +174,20 @@ export default createRule<Options, MessageIds>({
     }
 
     /**
+     * Checks if the node is the entire type annotation of a rest parameter,
+     * where a bare type would not be a valid replacement.
+     * @param node the node to be validated.
+     * @returns true if the node annotates a rest parameter directly
+     * @private
+     */
+    function isRestElementTypeAnnotation(node: TSESTree.TSAnyKeyword): boolean {
+      return (
+        node.parent.type === AST_NODE_TYPES.TSTypeAnnotation &&
+        isNodeRestElementInFunction(node.parent.parent)
+      );
+    }
+
+    /**
      * Checks if the node is within a keyof any expression
      * @param node the node to be validated.
      * @returns true if the node is within a keyof any expression, false otherwise
@@ -206,6 +220,10 @@ export default createRule<Options, MessageIds>({
           return;
         }
 
+        // a rest parameter must be an array type, so `...args: any` becomes
+        // `...args: unknown[]` rather than the invalid `...args: unknown`
+        const suffix = isRestElementTypeAnnotation(node) ? '[]' : '';
+
         const fixOrSuggest: {
           fix: TSESLint.ReportFixFunction | null;
           suggest: TSESLint.ReportSuggestionArray<MessageIds> | null;
@@ -221,11 +239,11 @@ export default createRule<Options, MessageIds>({
             : [
                 {
                   messageId: 'suggestUnknown',
-                  fix: fixer => fixer.replaceText(node, 'unknown'),
+                  fix: fixer => fixer.replaceText(node, `unknown${suffix}`),
                 },
                 {
                   messageId: 'suggestNever',
-                  fix: fixer => fixer.replaceText(node, 'never'),
+                  fix: fixer => fixer.replaceText(node, `never${suffix}`),
                 },
               ],
         };
@@ -233,7 +251,7 @@ export default createRule<Options, MessageIds>({
         if (fixToUnknown) {
           fixOrSuggest.fix = isKeyofAny
             ? createPropertyKeyFixer(node)
-            : fixer => fixer.replaceText(node, 'unknown');
+            : fixer => fixer.replaceText(node, `unknown${suffix}`);
         }
 
         context.report({

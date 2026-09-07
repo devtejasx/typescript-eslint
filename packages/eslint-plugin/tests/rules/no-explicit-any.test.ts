@@ -1771,11 +1771,11 @@ function foo(a: number, ...rest: never[]): void {
           suggestions: [
             {
               messageId: 'suggestUnknown',
-              output: 'function foo5(...args: unknown) {}',
+              output: 'function foo5(...args: unknown[]) {}',
             },
             {
               messageId: 'suggestNever',
-              output: 'function foo5(...args: never) {}',
+              output: 'function foo5(...args: never[]) {}',
             },
           ],
         },
@@ -1794,11 +1794,11 @@ function foo(a: number, ...rest: never[]): void {
           suggestions: [
             {
               messageId: 'suggestUnknown',
-              output: 'const bar5 = function (...args: unknown) {};',
+              output: 'const bar5 = function (...args: unknown[]) {};',
             },
             {
               messageId: 'suggestNever',
-              output: 'const bar5 = function (...args: never) {};',
+              output: 'const bar5 = function (...args: never[]) {};',
             },
           ],
         },
@@ -1817,11 +1817,11 @@ function foo(a: number, ...rest: never[]): void {
           suggestions: [
             {
               messageId: 'suggestUnknown',
-              output: 'const baz5 = (...args: unknown) => {};',
+              output: 'const baz5 = (...args: unknown[]) => {};',
             },
             {
               messageId: 'suggestNever',
-              output: 'const baz5 = (...args: never) => {};',
+              output: 'const baz5 = (...args: never[]) => {};',
             },
           ],
         },
@@ -1846,7 +1846,7 @@ interface Qux5 {
               messageId: 'suggestUnknown',
               output: `
 interface Qux5 {
-  (...args: unknown): void;
+  (...args: unknown[]): void;
 }
       `,
             },
@@ -1854,7 +1854,7 @@ interface Qux5 {
               messageId: 'suggestNever',
               output: `
 interface Qux5 {
-  (...args: never): void;
+  (...args: never[]): void;
 }
       `,
             },
@@ -1875,11 +1875,12 @@ interface Qux5 {
           suggestions: [
             {
               messageId: 'suggestUnknown',
-              output: 'function quux5(fn: (...args: unknown) => void): void {}',
+              output:
+                'function quux5(fn: (...args: unknown[]) => void): void {}',
             },
             {
               messageId: 'suggestNever',
-              output: 'function quux5(fn: (...args: never) => void): void {}',
+              output: 'function quux5(fn: (...args: never[]) => void): void {}',
             },
           ],
         },
@@ -1898,11 +1899,11 @@ interface Qux5 {
           suggestions: [
             {
               messageId: 'suggestUnknown',
-              output: 'function quuz5(): (...args: unknown) => void {}',
+              output: 'function quuz5(): (...args: unknown[]) => void {}',
             },
             {
               messageId: 'suggestNever',
-              output: 'function quuz5(): (...args: never) => void {}',
+              output: 'function quuz5(): (...args: never[]) => void {}',
             },
           ],
         },
@@ -1920,11 +1921,11 @@ interface Qux5 {
           suggestions: [
             {
               messageId: 'suggestUnknown',
-              output: 'type Fred5 = (...args: unknown) => void;',
+              output: 'type Fred5 = (...args: unknown[]) => void;',
             },
             {
               messageId: 'suggestNever',
-              output: 'type Fred5 = (...args: never) => void;',
+              output: 'type Fred5 = (...args: never[]) => void;',
             },
           ],
         },
@@ -1943,11 +1944,11 @@ interface Qux5 {
           suggestions: [
             {
               messageId: 'suggestUnknown',
-              output: 'type Corge5 = new (...args: unknown) => void;',
+              output: 'type Corge5 = new (...args: unknown[]) => void;',
             },
             {
               messageId: 'suggestNever',
-              output: 'type Corge5 = new (...args: never) => void;',
+              output: 'type Corge5 = new (...args: never[]) => void;',
             },
           ],
         },
@@ -1972,7 +1973,7 @@ interface Grault5 {
               messageId: 'suggestUnknown',
               output: `
 interface Grault5 {
-  new (...args: unknown): void;
+  new (...args: unknown[]): void;
 }
       `,
             },
@@ -1980,7 +1981,7 @@ interface Grault5 {
               messageId: 'suggestNever',
               output: `
 interface Grault5 {
-  new (...args: never): void;
+  new (...args: never[]): void;
 }
       `,
             },
@@ -2007,7 +2008,7 @@ interface Garply5 {
               messageId: 'suggestUnknown',
               output: `
 interface Garply5 {
-  f(...args: unknown): void;
+  f(...args: unknown[]): void;
 }
       `,
             },
@@ -2015,7 +2016,7 @@ interface Garply5 {
               messageId: 'suggestNever',
               output: `
 interface Garply5 {
-  f(...args: never): void;
+  f(...args: never[]): void;
 }
       `,
             },
@@ -2036,11 +2037,11 @@ interface Garply5 {
           suggestions: [
             {
               messageId: 'suggestUnknown',
-              output: 'declare function waldo5(...args: unknown): void;',
+              output: 'declare function waldo5(...args: unknown[]): void;',
             },
             {
               messageId: 'suggestNever',
-              output: 'declare function waldo5(...args: never): void;',
+              output: 'declare function waldo5(...args: never[]): void;',
             },
           ],
         },
@@ -2211,6 +2212,47 @@ const number: never = 1;
 // fixToUnknown: true
 const number: unknown = 1;
       `,
+    },
+    {
+      code: '// fixToUnknown: true\nfunction declaration(...args: any) {}',
+      errors: [
+        {
+          messageId: 'unexpectedAny',
+          suggestions: [
+            {
+              messageId: 'suggestUnknown',
+              output:
+                '// fixToUnknown: true\nfunction declaration(...args: unknown[]) {}',
+            },
+            {
+              messageId: 'suggestNever',
+              output:
+                '// fixToUnknown: true\nfunction declaration(...args: never[]) {}',
+            },
+          ],
+        },
+      ],
+      options: [{ fixToUnknown: true }],
+      output:
+        '// fixToUnknown: true\nfunction declaration(...args: unknown[]) {}',
+    },
+    {
+      code: 'function declaration(...args: any[]) {}',
+      errors: [
+        {
+          messageId: 'unexpectedAny',
+          suggestions: [
+            {
+              messageId: 'suggestUnknown',
+              output: 'function declaration(...args: unknown[]) {}',
+            },
+            {
+              messageId: 'suggestNever',
+              output: 'function declaration(...args: never[]) {}',
+            },
+          ],
+        },
+      ],
     },
   ],
 });
