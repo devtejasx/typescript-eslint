@@ -66,6 +66,31 @@ function findMatches(text: string, pattern: string, flags: string) {
   return text.match(new RegExp(pattern, flags));
 }
     `,
+    // https://github.com/typescript-eslint/typescript-eslint/issues/12827
+    `
+function findMatches(text: string, pattern: RegExp) {
+  return text.match(new RegExp(pattern));
+}
+    `,
+    // https://github.com/typescript-eslint/typescript-eslint/issues/12827
+    `
+function findMatches(text: string, pattern: RegExp) {
+  return text.match(RegExp(pattern));
+}
+    `,
+    // https://github.com/typescript-eslint/typescript-eslint/issues/12827
+    `
+function findMatches(text: string, pattern: string | RegExp) {
+  return text.match(new RegExp(pattern));
+}
+    `,
+    // https://github.com/typescript-eslint/typescript-eslint/issues/12827
+    `
+declare const patterns: RegExp[];
+function findMatches(text: string) {
+  return text.match(new RegExp(...patterns));
+}
+    `,
     // https://github.com/typescript-eslint/typescript-eslint/issues/3477
     `
 const matchCount = (str: string, re: RegExp) => {
@@ -274,6 +299,30 @@ function test(pattern: string) {
       output: `
 function test(pattern: string) {
   new RegExp(pattern, undefined).exec('check');
+}
+      `,
+    },
+    {
+      // A RegExp built from a string cannot inherit a global flag, so the
+      // absent flags argument really does mean no flags.
+      // https://github.com/typescript-eslint/typescript-eslint/issues/12827
+      code: `
+function test(text: string) {
+  text.match(new RegExp());
+}
+      `,
+      errors: [
+        {
+          column: 8,
+          endColumn: 13,
+          endLine: 3,
+          line: 3,
+          messageId: 'regExpExecOverStringMatch',
+        },
+      ],
+      output: `
+function test(text: string) {
+  new RegExp().exec(text);
 }
       `,
     },

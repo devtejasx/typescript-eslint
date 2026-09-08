@@ -91,7 +91,22 @@ export default createRule({
         const flags = node.arguments.at(1);
 
         if (!flags) {
-          return true;
+          const pattern = node.arguments.at(0);
+
+          if (!pattern) {
+            return true;
+          }
+
+          if (pattern.type === AST_NODE_TYPES.SpreadElement) {
+            return false;
+          }
+
+          // Omitting the flags argument does not mean no flags: constructing a
+          // RegExp from another RegExp copies its flags, so `new RegExp(re)` is
+          // global whenever `re` is.
+          return !tsutils
+            .unionConstituents(services.getTypeAtLocation(pattern))
+            .some(isRegExpType);
         }
 
         const flagsValue = getStaticValue(flags, globalScope);
