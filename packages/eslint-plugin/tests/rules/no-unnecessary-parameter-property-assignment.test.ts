@@ -173,6 +173,43 @@ class Foo {
   }
 }
     `,
+    // https://github.com/typescript-eslint/typescript-eslint/issues/12834
+    `
+class Foo {
+  constructor(public foo: string) {
+    foo = foo.trim();
+    this.foo = foo;
+  }
+}
+    `,
+    `
+class Foo {
+  constructor(public foo: string) {
+    if (!foo) {
+      foo = 'default';
+    }
+    this.foo = foo;
+  }
+}
+    `,
+    `
+class Foo {
+  constructor(public foo: number) {
+    foo += 1;
+    this.foo = foo;
+  }
+}
+    `,
+    `
+class Foo {
+  constructor(public foo: string[]) {
+    for (const bar of foo) {
+      foo = [bar];
+    }
+    this.foo = foo;
+  }
+}
+    `,
   ],
   invalid: [
     {

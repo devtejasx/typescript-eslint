@@ -1,4 +1,4 @@
-import type { TSESTree } from '@typescript-eslint/utils';
+import type { TSESLint, TSESTree } from '@typescript-eslint/utils';
 
 import { DefinitionType } from '@typescript-eslint/scope-manager';
 import { AST_NODE_TYPES, ASTUtils } from '@typescript-eslint/utils';
@@ -91,13 +91,28 @@ export default createRule({
       );
     }
 
-    function isReferenceFromParameter(node: TSESTree.Identifier): boolean {
+    function getParameterVariable(
+      node: TSESTree.Identifier,
+    ): TSESLint.Scope.Variable | null {
       const scope = context.sourceCode.getScope(node);
 
       const rightRef = scope.references.find(
         ref => ref.identifier.name === node.name,
       );
-      return rightRef?.resolved?.defs.at(0)?.type === DefinitionType.Parameter;
+      const variable = rightRef?.resolved;
+      return variable?.defs.at(0)?.type === DefinitionType.Parameter
+        ? variable
+        : null;
+    }
+
+    function isReassigned(variable: TSESLint.Scope.Variable): boolean {
+      // The parameter's own declaration, including any default value, is not a
+      // reassignment; anything else means the parameter no longer holds the
+      // value the parameter property was initialized with.
+      const declaration = variable.defs.at(0)?.name;
+      return variable.references.some(
+        ref => ref.isWrite() && ref.identifier !== declaration,
+      );
     }
 
     function isParameterPropertyWithName(
@@ -185,7 +200,13 @@ export default createRule({
 
         const rightId = getIdentifier(node.right);
 
-        if (leftName !== rightId?.name || !isReferenceFromParameter(rightId)) {
+        if (leftName !== rightId?.name) {
+          return;
+        }
+
+        const parameterVariable = getParameterVariable(rightId);
+
+        if (!parameterVariable || isReassigned(parameterVariable)) {
           return;
         }
 
