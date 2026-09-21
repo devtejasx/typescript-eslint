@@ -8,6 +8,35 @@ ruleTester.run('prefer-readonly', rule, {
     requireData: true,
   },
   valid: [
+    `
+      export class OuterClass {
+        private wasWritten = false;
+
+        public getInner() {
+          const outer = this;
+
+          return class {
+            public doSomething() {
+              outer.wasWritten = true;
+            }
+          };
+        }
+      }
+    `,
+    `
+      class Outer {
+        private count = 0;
+
+        constructor() {
+          const outer = this;
+          new (class {
+            increment() {
+              outer.count++;
+            }
+          })();
+        }
+      }
+    `,
     'function ignore() {}',
     'const ignore = function () {};',
     'const ignore = () => {};',
@@ -755,6 +784,44 @@ class Test3 {
     `,
   ],
   invalid: [
+    {
+      code: `
+        class Outer {
+          private value = 1;
+
+          getInner() {
+            const outer = this;
+            return class {
+              read() {
+                return outer.value;
+              }
+            };
+          }
+        }
+      `,
+      errors: [
+        {
+          data: {
+            name: 'value',
+          },
+          messageId: 'preferReadonly',
+        },
+      ],
+      output: `
+        class Outer {
+          private readonly value = 1;
+
+          getInner() {
+            const outer = this;
+            return class {
+              read() {
+                return outer.value;
+              }
+            };
+          }
+        }
+      `,
+    },
     {
       code: `
 class Test2 {

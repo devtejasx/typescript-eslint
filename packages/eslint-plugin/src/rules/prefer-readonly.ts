@@ -64,52 +64,44 @@ export default createRule<Options, MessageIds>({
     const checker = services.program.getTypeChecker();
     const classScopeStack: ClassScope[] = [];
 
-    function handlePropertyAccessExpression(
+    function isModifiedPropertyAccess(
       node: ts.PropertyAccessExpression,
       parent: ts.Node,
-      classScope: ClassScope,
-    ): void {
+    ): boolean {
       if (ts.isBinaryExpression(parent)) {
-        handleParentBinaryExpression(node, parent, classScope);
-        return;
+        return (
+          parent.left === node &&
+          tsutils.isAssignmentKind(parent.operatorToken.kind)
+        );
       }
 
       if (ts.isDeleteExpression(parent) || isDestructuringAssignment(node)) {
-        classScope.addVariableModification(node);
-        return;
+        return true;
       }
 
-      if (
-        ts.isPostfixUnaryExpression(parent) ||
-        ts.isPrefixUnaryExpression(parent)
-      ) {
-        handleParentPostfixOrPrefixUnaryExpression(parent, classScope);
-      }
+      return (
+        (ts.isPostfixUnaryExpression(parent) ||
+          ts.isPrefixUnaryExpression(parent)) &&
+        (parent.operator === ts.SyntaxKind.PlusPlusToken ||
+          parent.operator === ts.SyntaxKind.MinusMinusToken)
+      );
     }
 
-    function handleParentBinaryExpression(
-      node: ts.PropertyAccessExpression,
-      parent: ts.BinaryExpression,
-      classScope: ClassScope,
+    // A nested class can modify a member of an enclosing class through an
+    // alias of its `this` (e.g. `const outer = this`), so every class on the
+    // stack gets to see the modification. For the enclosing classes it never
+    // counts as a constructor modification: the nested class's code does not
+    // run as part of their constructor.
+    function addVariableModificationToScopes(
+      expression: ts.Expression,
+      memberName: string,
     ): void {
-      if (
-        parent.left === node &&
-        tsutils.isAssignmentKind(parent.operatorToken.kind)
-      ) {
-        classScope.addVariableModification(node);
-      }
-    }
-
-    function handleParentPostfixOrPrefixUnaryExpression(
-      node: ts.PostfixUnaryExpression | ts.PrefixUnaryExpression,
-      classScope: ClassScope,
-    ): void {
-      if (
-        node.operator === ts.SyntaxKind.PlusPlusToken ||
-        node.operator === ts.SyntaxKind.MinusMinusToken
-      ) {
-        classScope.addVariableModification(
-          node.operand as ts.PropertyAccessExpression,
+      const innermost = classScopeStack.length - 1;
+      for (const [index, classScope] of classScopeStack.entries()) {
+        classScope.addVariableModificationByName(
+          expression,
+          memberName,
+          index === innermost,
         );
       }
     }
@@ -353,13 +345,16 @@ export default createRule<Options, MessageIds>({
           return;
         }
 
-        const classScope = classScopeStack[classScopeStack.length - 1];
-
         if (!node.computed) {
           const tsNode = services.esTreeNodeToTSNodeMap.get(
             node,
           ) as ts.PropertyAccessExpression;
-          handlePropertyAccessExpression(tsNode, tsNode.parent, classScope);
+          if (isModifiedPropertyAccess(tsNode, tsNode.parent)) {
+            addVariableModificationToScopes(
+              tsNode.expression,
+              tsNode.name.text,
+            );
+          }
         } else {
           const tsNode = services.esTreeNodeToTSNodeMap.get(node);
           if (
@@ -370,10 +365,7 @@ export default createRule<Options, MessageIds>({
           ) {
             const memberName = getStaticMemberAccessValue(node, context);
             if (typeof memberName === 'string') {
-              classScope.addVariableModificationByName(
-                tsNode.expression,
-                memberName,
-              );
+              addVariableModificationToScopes(tsNode.expression, memberName);
             }
           }
         }
@@ -465,13 +457,10 @@ class ClassScope {
     ).set(memberName, node);
   }
 
-  public addVariableModification(node: ts.PropertyAccessExpression): void {
-    this.addVariableModificationByName(node.expression, node.name.text);
-  }
-
   public addVariableModificationByName(
     expression: ts.Expression,
     memberName: string,
+    isInnermostClass = true,
   ): void {
     const modifierType = this.checker.getTypeAtLocation(expression);
 
@@ -480,6 +469,7 @@ class ClassScope {
 
     if (
       relationOfModifierTypeToClass === TypeToClassRelation.Instance &&
+      isInnermostClass &&
       this.constructorScopeDepth === DIRECTLY_INSIDE_CONSTRUCTOR
     ) {
       this.memberVariableWithConstructorModifications.add(memberName);
