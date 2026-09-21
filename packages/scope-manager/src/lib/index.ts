@@ -248,4 +248,5 @@ export const lib: ReadonlyMap<string, LibDefinition> = new Map<
   ['es2025.full', es2025_full],
   ['esnext.full', esnext_full],
   ['lib', libBase],
+  ['es2022.sharedmemory', es2024_sharedmemory],
 ]);

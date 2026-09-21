@@ -118,6 +118,19 @@ describe('implicit lib definitions', () => {
     expect(symbolVariables[0]).toBeInstanceOf(ImplicitLibVariable);
   });
 
+  it('should accept a lib removed from TypeScript that older supported versions accept', () => {
+    // es2022.sharedmemory was folded into es2024.sharedmemory in TypeScript 5.7
+    const { scopeManager } = parseAndAnalyze('type T = Atomics;', {
+      lib: ['es2022.sharedmemory'],
+    });
+
+    const atomicsVariables = scopeManager.variables.filter(
+      v => v.name === 'Atomics',
+    );
+    expect(atomicsVariables).toHaveLength(1);
+    expect(atomicsVariables[0]).toBeInstanceOf(ImplicitLibVariable);
+  });
+
   it('should throw if passed an unrecognized lib name', () => {
     expect(() => {
       parseAndAnalyze('var f = (a: Symbol) => a;', {
