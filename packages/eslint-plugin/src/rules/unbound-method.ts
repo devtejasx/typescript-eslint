@@ -161,7 +161,7 @@ export default createRule<Options, MessageIds>({
           ignoreStatic: {
             type: 'boolean',
             description:
-              'Whether to skip checking whether `static` methods are correctly bound.',
+              'Whether to skip checking whether `static` methods, including methods of constructor objects, are correctly bound.',
           },
         },
       },
@@ -176,9 +176,21 @@ export default createRule<Options, MessageIds>({
     const services = getParserServices(context);
     const currentSourceFile = services.program.getSourceFile(context.filename);
 
+    /**
+     * With `ignoreStatic`, a member read off a constructible object type is
+     * treated as static, the same as a member declared with `static`. This
+     * covers constructors declared as a variable with an interface type, such
+     * as `declare var Buffer: BufferConstructor`, whose members are plain
+     * method signatures.
+     */
+    function isStaticOwner(type: ts.Type): boolean {
+      return ignoreStatic && type.getConstructSignatures().length > 0;
+    }
+
     function checkIfMethodAndReport(
       node: TSESTree.Node,
       symbol: ts.Symbol | undefined,
+      ownerIsStatic: boolean,
     ): boolean {
       if (!symbol) {
         return false;
@@ -188,7 +200,7 @@ export default createRule<Options, MessageIds>({
         symbol,
         ignoreStatic,
       );
-      if (dangerous) {
+      if (dangerous && !ownerIsStatic) {
         context.report({
           node,
           messageId:
@@ -206,15 +218,19 @@ export default createRule<Options, MessageIds>({
       propertyName: string,
       type: ts.Type,
     ): boolean {
-      for (const intersectionPart of tsutils
-        .unionConstituents(type)
-        .flatMap(unionPart => tsutils.intersectionConstituents(unionPart))) {
-        const reported = checkIfMethodAndReport(
-          reportNode,
-          intersectionPart.getProperty(propertyName),
-        );
-        if (reported) {
-          return true;
+      for (const unionPart of tsutils.unionConstituents(type)) {
+        const ownerIsStatic = isStaticOwner(unionPart);
+        for (const intersectionPart of tsutils.intersectionConstituents(
+          unionPart,
+        )) {
+          const reported = checkIfMethodAndReport(
+            reportNode,
+            intersectionPart.getProperty(propertyName),
+            ownerIsStatic,
+          );
+          if (reported) {
+            return true;
+          }
         }
       }
       return false;
@@ -332,11 +348,11 @@ export default createRule<Options, MessageIds>({
 
           if (initNode) {
             if (!isNativelyBound(initNode, property.key)) {
+              const initType = services.getTypeAtLocation(initNode);
               const reported = checkIfMethodAndReport(
                 property.key,
-                services
-                  .getTypeAtLocation(initNode)
-                  .getProperty(property.key.name),
+                initType.getProperty(property.key.name),
+                isStaticOwner(initType),
               );
               if (reported) {
                 continue;

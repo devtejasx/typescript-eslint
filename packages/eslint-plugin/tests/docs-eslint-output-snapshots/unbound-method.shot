@@ -72,3 +72,13 @@ class OtherClass {
 const { log } = OtherClass;
 
 log();
+
+// Methods of a constructor declared through an interface, as many built-in
+// and library types are (e.g. `Buffer.compare`), count as statics too
+interface WidgetConstructor {
+  new (): object;
+  compare(a: object, b: object): number;
+}
+declare const Widget: WidgetConstructor;
+
+[new Widget(), new Widget()].sort(Widget.compare);

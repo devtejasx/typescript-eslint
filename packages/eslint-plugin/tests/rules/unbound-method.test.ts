@@ -1826,6 +1826,37 @@ declare const foo: Foo;
 declare const bazz: string;
 foo[bazz];
     `,
+    // https://github.com/typescript-eslint/typescript-eslint/issues/7893
+    {
+      code: `
+interface Buffer extends Uint8Array {}
+interface BufferConstructor {
+  new (str: string): Buffer;
+  from(str: string): Buffer;
+  compare(buf1: Uint8Array, buf2: Uint8Array): number;
+}
+declare var Buffer: BufferConstructor;
+
+const arr = [Buffer.from('1234'), Buffer.from('0123')];
+arr.sort(Buffer.compare);
+const { compare } = Buffer;
+      `,
+      options: [{ ignoreStatic: true }],
+    },
+    {
+      code: `
+interface ThingConstructor {
+  new (): object;
+  create(): object;
+}
+interface Creator {
+  create(): object;
+}
+declare const ThingOrCreator: ThingConstructor & Creator;
+const create = ThingOrCreator.create;
+      `,
+      options: [{ ignoreStatic: true }],
+    },
   ],
   invalid: [
     {
@@ -3259,6 +3290,55 @@ const f = collator.compare;
           messageId: 'unboundWithoutThisAnnotation',
         },
       ],
+    },
+    // https://github.com/typescript-eslint/typescript-eslint/issues/7893
+    {
+      // methods of a constructor object still need ignoreStatic
+      code: `
+interface BufferConstructor {
+  new (str: string): Uint8Array;
+  compare(buf1: Uint8Array, buf2: Uint8Array): number;
+}
+declare var Buffer: BufferConstructor;
+const compare = Buffer.compare;
+      `,
+      errors: [
+        {
+          column: 17,
+          endColumn: 31,
+          endLine: 7,
+          line: 7,
+          messageId: 'unboundWithoutThisAnnotation',
+        },
+      ],
+    },
+    {
+      // an object that is not constructible is not a static owner
+      code: `
+interface Comparer {
+  compare(buf1: Uint8Array, buf2: Uint8Array): number;
+}
+declare const comparer: Comparer;
+const { compare } = comparer;
+const compare2 = comparer.compare;
+      `,
+      errors: [
+        {
+          column: 9,
+          endColumn: 16,
+          endLine: 6,
+          line: 6,
+          messageId: 'unboundWithoutThisAnnotation',
+        },
+        {
+          column: 18,
+          endColumn: 34,
+          endLine: 7,
+          line: 7,
+          messageId: 'unboundWithoutThisAnnotation',
+        },
+      ],
+      options: [{ ignoreStatic: true }],
     },
   ],
 });
