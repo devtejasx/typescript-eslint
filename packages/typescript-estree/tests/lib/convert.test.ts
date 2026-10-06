@@ -135,6 +135,53 @@ describe('convert', () => {
     checkMaps(ast);
   });
 
+  it('nodeMaps should contain every node of a binary expression chain', () => {
+    const ast = convertCode(`
+      a + b * c - d && e || f;
+      x = y + z;
+      (p, q) + r;
+      #s in t;
+    `);
+
+    const instance = new Converter(ast, {
+      shouldPreserveNodeMaps: true,
+    });
+    instance.convertProgram();
+    const maps = instance.getASTMaps();
+
+    function checkMaps(child: ts.Node): void {
+      child.forEachChild(node => {
+        if (ts.isBinaryExpression(node)) {
+          expect(node).toBe(
+            maps.esTreeNodeToTSNodeMap.get(
+              maps.tsNodeToESTreeNodeMap.get(node as TSNode),
+            ),
+          );
+        }
+        checkMaps(node);
+      });
+    }
+
+    checkMaps(ast);
+  });
+
+  it('converts a very long binary expression chain without overflowing the stack', () => {
+    const operands = 20_000;
+    const code = `const s = ${Array.from({ length: operands }, (_, i) => `a${i}`).join(' + ')};`;
+    const program = new Converter(convertCode(code)).convertProgram();
+
+    const declaration = program.body[0] as TSESTree.VariableDeclaration;
+    let node: TSESTree.Expression = declaration.declarations[0].init!;
+    let depth = 0;
+    while (node.type === AST_NODE_TYPES.BinaryExpression) {
+      expect(node.right).toMatchObject({ name: `a${operands - 1 - depth}` });
+      node = node.left as TSESTree.Expression;
+      depth++;
+    }
+    expect(depth).toBe(operands - 1);
+    expect(node).toMatchObject({ name: 'a0' });
+  });
+
   it('nodeMaps should contain jsx nodes', () => {
     const ast = convertCode(`<a.b.c.d.e></a.b.c.d.e>`);
 

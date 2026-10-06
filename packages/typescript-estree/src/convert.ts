@@ -62,6 +62,11 @@ export function convertError(
   );
 }
 
+type BinaryOrLogicalExpressionType = Exclude<
+  ReturnType<typeof getBinaryExpressionType>,
+  { type: AST_NODE_TYPES.AssignmentExpression }
+>;
+
 export interface ASTMaps {
   esTreeNodeToTSNodeMap: ParserWeakMapESTreeToTSNode;
   tsNodeToESTreeNodeMap: ParserWeakMap<TSNode, TSESTree.Node>;
@@ -253,6 +258,51 @@ export class Converter {
         // filter out unknown nodes for now
         .filter(statement => statement)
     );
+  }
+
+  /**
+   * Converts a binary or logical expression and the chain of binary and
+   * logical expressions nested in its left operand, such as `a + b + c`.
+   * Converting the chain with a loop instead of recursion keeps very long
+   * chains from overflowing the call stack.
+   */
+  private convertBinaryExpressionChain(
+    node: ts.BinaryExpression,
+    expressionType: BinaryOrLogicalExpressionType,
+  ): TSESTree.BinaryExpression | TSESTree.LogicalExpression {
+    const chain = [{ expressionType, node }];
+    let innermost = node;
+    while (
+      ts.isBinaryExpression(innermost.left) &&
+      !isComma(innermost.left.operatorToken)
+    ) {
+      const leftType = getBinaryExpressionType(innermost.left.operatorToken);
+      if (leftType.type === AST_NODE_TYPES.AssignmentExpression) {
+        break;
+      }
+      innermost = innermost.left;
+      chain.push({ expressionType: leftType, node: innermost });
+    }
+
+    let left = this.convertChild(innermost.left, innermost);
+    for (let i = chain.length - 1; i >= 0; i--) {
+      const current = chain[i];
+      if (i > 0) {
+        this.#checkSyntaxError(current.node, chain[i - 1].node);
+      }
+      const result = this.createNode<
+        TSESTree.BinaryExpression | TSESTree.LogicalExpression
+      >(current.node, {
+        ...current.expressionType,
+        left,
+        right: this.convertChild(current.node.right),
+      });
+      if (i > 0) {
+        this.registerTSNodeInNodeMap(current.node, result);
+      }
+      left = result;
+    }
+    return left;
   }
 
   private convertChainExpression(
@@ -1830,17 +1880,12 @@ export class Converter {
             typeAnnotation: undefined,
           });
         }
-        return this.createNode<
-          | TSESTree.AssignmentExpression
-          | TSESTree.BinaryExpression
-          | TSESTree.LogicalExpression
-        >(node, {
+        if (expressionType.type !== AST_NODE_TYPES.AssignmentExpression) {
+          return this.convertBinaryExpressionChain(node, expressionType);
+        }
+        return this.createNode<TSESTree.AssignmentExpression>(node, {
           ...expressionType,
-          left: this.converter(
-            node.left,
-            node,
-            expressionType.type === AST_NODE_TYPES.AssignmentExpression,
-          ),
+          left: this.converter(node.left, node, true),
           right: this.convertChild(node.right),
         });
       }
