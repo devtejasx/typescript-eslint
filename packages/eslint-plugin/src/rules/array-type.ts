@@ -266,10 +266,16 @@ export default createRule<Options, MessageIds>({
 
         const type = typeParams[0];
         const typeParens = typeNeedsParentheses(type);
+        // `readonly T[]` binds looser than a postfix `[]` or `[K]`, so it
+        // needs parentheses as the element of an array or the object of an
+        // indexed access type.
         const parentParens =
           readonlyPrefix &&
-          node.parent.type === AST_NODE_TYPES.TSArrayType &&
-          !isParenthesized(node.parent.elementType, context.sourceCode);
+          ((node.parent.type === AST_NODE_TYPES.TSArrayType &&
+            !isParenthesized(node.parent.elementType, context.sourceCode)) ||
+            (node.parent.type === AST_NODE_TYPES.TSIndexedAccessType &&
+              node.parent.objectType === node &&
+              !isParenthesized(node.parent.objectType, context.sourceCode)));
 
         const start = `${parentParens ? '(' : ''}${readonlyPrefix}${
           typeParens ? '(' : ''

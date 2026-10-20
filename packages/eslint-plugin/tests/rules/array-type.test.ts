@@ -2042,6 +2042,63 @@ interface FooInterface {
       output: 'type Foo = (readonly object[])[];',
     },
     {
+      code: 'type Foo = ReadonlyArray<object>[number];',
+      errors: [
+        {
+          column: 12,
+          data: {
+            className: 'ReadonlyArray',
+            readonlyPrefix: 'readonly ',
+            type: 'object',
+          },
+          endColumn: 33,
+          endLine: 1,
+          line: 1,
+          messageId: 'errorStringArray',
+        },
+      ],
+      options: [{ default: 'array' }],
+      output: 'type Foo = (readonly object[])[number];',
+    },
+    {
+      code: 'type Foo = ReadonlyArray<object>[number][];',
+      errors: [
+        {
+          column: 12,
+          data: {
+            className: 'ReadonlyArray',
+            readonlyPrefix: 'readonly ',
+            type: 'object',
+          },
+          endColumn: 33,
+          endLine: 1,
+          line: 1,
+          messageId: 'errorStringArray',
+        },
+      ],
+      options: [{ default: 'array' }],
+      output: 'type Foo = (readonly object[])[number][];',
+    },
+    {
+      code: 'type Foo = (ReadonlyArray<object>)[number];',
+      errors: [
+        {
+          column: 13,
+          data: {
+            className: 'ReadonlyArray',
+            readonlyPrefix: 'readonly ',
+            type: 'object',
+          },
+          endColumn: 34,
+          endLine: 1,
+          line: 1,
+          messageId: 'errorStringArray',
+        },
+      ],
+      options: [{ default: 'array' }],
+      output: 'type Foo = (readonly object[])[number];',
+    },
+    {
       code: 'const foo: Array<new (...args: any[]) => void> = [];',
       errors: [
         {
