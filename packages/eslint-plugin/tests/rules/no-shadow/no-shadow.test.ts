@@ -757,8 +757,75 @@ foo5: boolean;
       },
       options: [{ builtinGlobals: true }],
     },
+    {
+      code: `
+const TOKEN = 'abc123';
+enum Header {
+  TOKEN = 'x-token',
+  TRACE = \`x-trace\`,
+}
+      `,
+      options: [{ ignoreLiteralEnumMembers: true }],
+    },
+    {
+      code: `
+const Low = 0;
+enum Level {
+  Low = -1,
+  Mid,
+  High = 10,
+}
+      `,
+      options: [{ ignoreLiteralEnumMembers: true }],
+    },
   ],
   invalid: [
+    {
+      code: `
+const TOKEN = 'abc123';
+enum Header {
+  TOKEN = 'x-token',
+  AUTH = TOKEN,
+}
+      `,
+      errors: [
+        {
+          column: 3,
+          data: {
+            name: 'TOKEN',
+            shadowedColumn: 7,
+            shadowedLine: 2,
+          },
+          endColumn: 8,
+          endLine: 4,
+          line: 4,
+          messageId: 'noShadow',
+        },
+      ],
+      options: [{ ignoreLiteralEnumMembers: true }],
+    },
+    {
+      code: `
+const TOKEN = 'abc123';
+enum Header {
+  TOKEN = 'x-token',
+}
+      `,
+      errors: [
+        {
+          column: 3,
+          data: {
+            name: 'TOKEN',
+            shadowedColumn: 7,
+            shadowedLine: 2,
+          },
+          endColumn: 8,
+          endLine: 4,
+          line: 4,
+          messageId: 'noShadow',
+        },
+      ],
+    },
     {
       code: `
 type T = 1;

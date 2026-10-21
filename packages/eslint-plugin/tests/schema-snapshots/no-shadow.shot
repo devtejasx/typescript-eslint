@@ -25,6 +25,10 @@
         "description": "Whether to ignore function parameters named the same as a variable.",
         "type": "boolean"
       },
+      "ignoreLiteralEnumMembers": {
+        "description": "Whether to ignore enum members named the same as a variable when every member of the enum has a literal value.",
+        "type": "boolean"
+      },
       "ignoreOnInitialization": {
         "description": "Whether to ignore the variable initializers when the shadowed variable is presumably still uninitialized.",
         "type": "boolean"
@@ -57,6 +61,8 @@ type Options = [
       | 'all';
     /** Whether to ignore function parameters named the same as a variable. */
     ignoreFunctionTypeParameterNameValueShadow?: boolean;
+    /** Whether to ignore enum members named the same as a variable when every member of the enum has a literal value. */
+    ignoreLiteralEnumMembers?: boolean;
     /** Whether to ignore the variable initializers when the shadowed variable is presumably still uninitialized. */
     ignoreOnInitialization?: boolean;
     /** Whether to ignore types named the same as a variable. */

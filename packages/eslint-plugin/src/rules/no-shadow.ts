@@ -13,6 +13,7 @@ export type Options = [
     builtinGlobals?: boolean;
     hoist?: 'all' | 'functions' | 'functions-and-types' | 'never' | 'types';
     ignoreFunctionTypeParameterNameValueShadow?: boolean;
+    ignoreLiteralEnumMembers?: boolean;
     ignoreOnInitialization?: boolean;
     ignoreTypeValueShadow?: boolean;
   },
@@ -79,6 +80,11 @@ export default createRule<Options, MessageIds>({
             description:
               'Whether to ignore function parameters named the same as a variable.',
           },
+          ignoreLiteralEnumMembers: {
+            type: 'boolean',
+            description:
+              'Whether to ignore enum members named the same as a variable when every member of the enum has a literal value.',
+          },
           ignoreOnInitialization: {
             type: 'boolean',
             description:
@@ -100,6 +106,7 @@ export default createRule<Options, MessageIds>({
       builtinGlobals: false,
       hoist: 'functions-and-types',
       ignoreFunctionTypeParameterNameValueShadow: true,
+      ignoreLiteralEnumMembers: false,
       ignoreOnInitialization: false,
       ignoreTypeValueShadow: true,
     },
@@ -627,6 +634,53 @@ export default createRule<Options, MessageIds>({
       });
     }
 
+    function isLiteralEnumMemberValue(
+      initializer: TSESTree.Expression | undefined,
+    ): boolean {
+      if (!initializer) {
+        return true;
+      }
+      switch (initializer.type) {
+        case AST_NODE_TYPES.Literal:
+          return (
+            typeof initializer.value === 'string' ||
+            typeof initializer.value === 'number'
+          );
+        case AST_NODE_TYPES.TemplateLiteral:
+          return initializer.expressions.length === 0;
+        case AST_NODE_TYPES.UnaryExpression:
+          return (
+            (initializer.operator === '-' || initializer.operator === '+') &&
+            initializer.argument.type === AST_NODE_TYPES.Literal &&
+            typeof initializer.argument.value === 'number'
+          );
+        default:
+          return false;
+      }
+    }
+
+    /**
+     * Check if a variable is an enum member of an enum whose members all have
+     * literal values. Such an enum never reads a name, so the shadow cannot
+     * change any value.
+     */
+    function isLiteralEnumMemberShadow(
+      variable: TSESLint.Scope.Variable,
+    ): boolean {
+      if (options.ignoreLiteralEnumMembers !== true) {
+        return false;
+      }
+
+      const def = variable.defs[0];
+      if (def.type !== DefinitionType.TSEnumMember) {
+        return false;
+      }
+
+      return def.node.parent.members.every(member =>
+        isLiteralEnumMemberValue(member.initializer),
+      );
+    }
+
     /**
      * Checks the current context for shadowed variables.
      * @param scope Fixme
@@ -685,6 +739,11 @@ export default createRule<Options, MessageIds>({
 
         // ignore function type parameter name shadowing if configured
         if (isFunctionTypeParameterNameValueShadow(variable, shadowed)) {
+          continue;
+        }
+
+        // ignore members of literal-only enums if configured
+        if (isLiteralEnumMemberShadow(variable)) {
           continue;
         }
 

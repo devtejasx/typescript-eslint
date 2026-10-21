@@ -120,6 +120,39 @@ const test = 1;
 type Func = (test: string) => typeof test;
 ```
 
+### `ignoreLiteralEnumMembers`
+
+{/* insert option description */}
+
+Enum members shadow outer variables because an unqualified name in a member initializer refers to the member (see the [FAQ](#why-does-the-rule-report-on-enum-members-that-share-the-same-name-as-a-variable-in-a-parent-scope)). When every member of an enum has no initializer or a literal one (a string, a number or a template literal without expressions), no initializer reads a name, so the shadow cannot change any value. This option ignores members of such enums. Members of enums with any other initializer are still reported.
+
+Examples of code with `{ ignoreLiteralEnumMembers: true }`:
+
+<Tabs>
+<TabItem value="❌ Incorrect">
+
+```ts option='{ "ignoreLiteralEnumMembers": true }'
+const TOKEN = 'abc123';
+enum Header {
+  TOKEN = 'x-token',
+  AUTH = TOKEN,
+}
+```
+
+</TabItem>
+<TabItem value="✅ Correct">
+
+```ts option='{ "ignoreLiteralEnumMembers": true }'
+const TOKEN = 'abc123';
+enum Header {
+  TOKEN = 'x-token',
+  TRACE = 'x-trace',
+}
+```
+
+</TabItem>
+</Tabs>
+
 ## FAQ
 
 ### Why does the rule report on enum members that share the same name as a variable in a parent scope?
